@@ -19,9 +19,10 @@ CON
     MISO_BITORDER               = 0             'MSBPRE
 
 ' Register definitions
+    UNIQUE_ID                   = $4B
     MANUF_DEV_ID                = $90
-    DEVICE_ID                   = $AB
     JEDEC_ID                    = $9F
+    DEVICE_ID                   = $AB
 
 PUB Null
 ' This is not a top-level object

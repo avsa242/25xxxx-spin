@@ -60,7 +60,12 @@ PUB ManufacturerID
 ' Read the Mfr ID+Device ID from the flash chip
     readReg(core#MANUF_DEV_ID, 2, @result)
 
-PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet, cmd_bytes, tmp
+PUB UID(buff_addr)
+' Read unique 64-bit ID/serial number
+'   NOTE: Buffer at buff_addr must be at least 8 bytes in length
+    readReg(core#UNIQUE_ID, 8, buff_addr)
+
+PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet[2], cmd_bytes, tmp
 ' Read nr_bytes from register 'reg' to address 'buf_addr'
 
 ' Handle quirky registers on a case-by-case basis
@@ -71,6 +76,13 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet, cmd_bytes, tmp
             cmd_packet.byte[1] := $00
             cmd_packet.byte[2] := $00
             cmd_packet.byte[3] := $00
+        core#UNIQUE_ID:
+            cmd_bytes := 5
+            cmd_packet.byte[0] := reg
+            cmd_packet.byte[1] := $00
+            cmd_packet.byte[2] := $00
+            cmd_packet.byte[3] := $00
+            cmd_packet.byte[4] := $00
 
         OTHER:
             cmd_bytes := 1
