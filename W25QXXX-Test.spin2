@@ -44,8 +44,9 @@ OBJ
 VAR
 
     long _ser_cog, _flash_cog
+    byte _page[256]
 
-PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp
+PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp, s, e
 
     Setup
 
@@ -61,6 +62,45 @@ PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp
     seg := base := 0
     ser.position(0, 10)
 
+' Page method
+    repeat
+        s := cnt
+        flash.ReadBlock(base, 256, @_page)
+        e := cnt-s
+        repeat seg from 0 to 239 step 16
+            ser.printf("%x: ", base + seg)
+            repeat offs from 0 to 15
+                ser.hex(_page[seg + offs], 2)
+                ser.char(" ")
+            ser.newline
+
+        case ser.CharIn
+            "[":
+                base := base - 256
+                if base < 0
+                    base := 0
+            "]":
+                base := base + 256
+                if base > $FF_FF_00
+                    base := $FF_FF_00
+            "e":
+                base := $FF_FF_00
+            "s":
+                base := 0
+            "x":
+                EraseSector(base)
+            "w":
+                WriteTest(base)
+            "q":
+                ser.printf("Halting\n")
+                quit
+            OTHER:
+        MessageWritesEna
+        ser.printf("Reading done (%d cycles).\n", e)
+        ser.Clear(ser#CLR_CUR_TO_END)
+        ser.Position(0, 10)
+
+{' Byte method
     repeat
         ser.printf("%x: ", base + seg)
         repeat offs from 0 to 15
@@ -93,7 +133,7 @@ PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp
                     quit
                 OTHER:
             ser.Position(0, 10)
-
+}
     FlashLED(LED, 100)     ' Signal execution finished
 
 PUB EraseSector(start_addr) | s, e
@@ -111,15 +151,14 @@ PUB EraseSector(start_addr) | s, e
 
 PUB WriteTest(start_addr) | i, s, e, tmp
 
-    flash.WritesEnabled(TRUE)
-    MessageWritesEna
-
     tmp := $DE_AD_BE_EF
     ser.printf("Writing test value...")
+    repeat until not flash.Busy
     s := cnt
-    repeat i from start_addr to start_addr + 3
+    repeat i from 0 to 3
         flash.WritesEnabled(TRUE)
-        flash.WriteByte(i, tmp.byte[3-i])
+        MessageWritesEna
+        flash.WriteByte(start_addr + i, tmp.byte[3-i])
     e := cnt-s
     ser.printf("done (%d cycles).\n", e)
     ser.Clear(ser#CLR_CUR_TO_END)
