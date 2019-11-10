@@ -57,8 +57,9 @@ PUB JEDECID
     readReg(core#JEDEC_ID, 3, @result)
 
 PUB ManufacturerID
-' Read the Mfr ID+Device ID from the flash chip
-    readReg(core#MANUF_DEV_ID, 2, @result)
+' Read the Mfr ID from the flash chip
+'   Known values: $EF (Winbond)
+    readReg(core#MANUF_DEV_ID, 1, @result)
 
 PUB UID(buff_addr)
 ' Read unique 64-bit ID/serial number

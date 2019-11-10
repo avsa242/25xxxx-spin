@@ -38,7 +38,7 @@ PUB Main | uid[2]
     Setup
 
     ser.printf("Dev ID: %x\n", mem.DeviceID)
-    ser.printf("Mfr ID/Dev ID: %x\n", mem.ManufacturerID)
+    ser.printf("Mfr ID: %x\n", mem.ManufacturerID)
     ser.printf("JEDEC ID: %x\n", mem.JEDECID)
     mem.UID(@uid)
     ser.printf("UID: %x%x", uid[0], uid[1])
