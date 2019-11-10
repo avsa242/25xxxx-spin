@@ -62,6 +62,10 @@ PUB ManufacturerID
 '   Known values: $EF (Winbond)
     readReg(core#MANUF_DEV_ID, 1, @result)
 
+PUB ReadByte(flash_addr) | tmp
+' Read a byte of data from flash
+    readReg(core#READ_DATA | (flash_addr << 8), 1, @result)
+
 PUB UID(buff_addr)
 ' Read unique 64-bit ID/serial number
 '   NOTE: Buffer at buff_addr must be at least 8 bytes in length
@@ -71,7 +75,7 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet[2], cmd_bytes, tmp
 ' Read nr_bytes from register 'reg' to address 'buf_addr'
 
 ' Handle quirky registers on a case-by-case basis
-    case reg
+    case reg.byte[0]
         core#MANUF_DEV_ID:
             cmd_bytes := 4
             cmd_packet.byte[0] := reg
@@ -85,6 +89,12 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet[2], cmd_bytes, tmp
             cmd_packet.byte[2] := $00
             cmd_packet.byte[3] := $00
             cmd_packet.byte[4] := $00
+        core#READ_DATA:
+            cmd_bytes := 4
+            cmd_packet.byte[0] := reg.byte[0]
+            cmd_packet.byte[1] := reg.byte[1]
+            cmd_packet.byte[2] := reg.byte[2]
+            cmd_packet.byte[3] := reg.byte[3]
 
         OTHER:
             cmd_bytes := 1

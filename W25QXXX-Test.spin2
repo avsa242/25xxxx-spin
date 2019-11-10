@@ -33,7 +33,7 @@ VAR
 
     long _ser_cog, _mem_cog
 
-PUB Main | uid[2]
+PUB Main | uid[2], addr, offs, rd_tmp, lines
 
     Setup
 
@@ -42,6 +42,23 @@ PUB Main | uid[2]
     ser.printf("JEDEC ID: %x\n", mem.JEDECID)
     mem.UID(@uid)
     ser.printf("UID: %x%x", uid[0], uid[1])
+
+    lines := 0
+
+    ser.position(0, 10)
+    repeat addr from 0 to 16777215 step 16
+        ser.printf("%x: ", addr)
+        repeat offs from 0 to 15
+            rd_tmp := mem.ReadByte(addr+offs)
+            ser.hex(rd_tmp, 2)
+            ser.char(" ")
+        ser.Newline
+        lines++
+        if lines > 40
+            lines := 0
+            ser.CharIn
+            ser.Position(0, 10)
+
     Flash(LED, 100)     ' Signal execution finished
 
 PUB Setup
