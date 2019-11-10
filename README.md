@@ -8,7 +8,8 @@ This is a P2X8C4M64P/Propeller 2 driver object for Winbond 25Qxxx-series Flash m
 * SPI connection at up to 6.5MHz
 * Read device ID, Mfr. ID, JEDEC ID
 * Read, write a byte
-* Erase a sector, 32kB block, 64kB block, entire chip
+* Read, write a block (write limited to a page per transaction - 256 bytes)
+* Erase a sector (4kB), 32kB block, 64kB block, entire chip
 * Read busy flag
 
 ## Requirements
@@ -29,7 +30,7 @@ This is a P2X8C4M64P/Propeller 2 driver object for Winbond 25Qxxx-series Flash m
 ## TODO
 
 - [x] Add methods for basic I/O (read, write bytes)
-- [ ] Add methods for larger transactions
+- [x] Add methods for larger transactions
 - [x] Add a simple hex dump demo
 - [ ] Add a simple backup to SD app
 - [ ] Add support for other density parts (may be untested)
