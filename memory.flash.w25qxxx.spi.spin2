@@ -14,6 +14,12 @@ CON
 
     DEF_SPI_CLK         = 1_000_000
 
+' Erase units
+    SECTOR              = 1     '4KB
+    BLOCK32             = 2     '32KB
+    BLOCK64             = 3     '64KB
+    CHIP                = 4     'Entire chip
+
 VAR
 
     byte _CS, _MOSI, _MISO, _SCK
@@ -48,14 +54,41 @@ PUB Startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, SCK_HZ, SCK_CPOL): okay
 
     return FALSE                                                'If we got here, something went wrong
 
+PUB Busy
+' Busy flag
+'   Returns: TRUE when flash chip is executing any of the following, FALSE otherwise:
+'       Page program, Erase, Write status reg, Erase/Program security reg
+    return (readStatusReg(1) & core#FLAG_BUSY) * TRUE
+
 PUB DeviceID
 ' Read the device ID from the flash chip
     readReg(core#MANUF_DEV_ID, 2, @result)
     result >>= 8
 
+PUB Erase(erase_unit, flash_addr) | tmp
+' Erase flash memory starting at flash_addr, of size erase_unit
+'   Valid values:
+'       SECTOR (1) - Erase 4kBytes
+'       BLOCK32 (2) - Erase 32kBytes
+'       BLOCK64 (3) - Erase 64kBytes
+'       CHIP (4) - Erase entire chip
+'   Any other value is ignored
+'   NOTE: flash_addr is ignored when erase_unit is CHIP
+'   NOTE: Prior to calling this method, writes must be enabled with WritesEnabled(TRUE)
+'   NOTE: Erased state of a flash cell is $FF
+    case erase_unit
+        SECTOR, BLOCK32, BLOCK64:
+            erase_unit := lookup(erase_unit: core#SECTOR_ERASE, core#BLOCK32_ERASE, core#BLOCK64_ERASE)
+            erase_unit |= (flash_addr << 8)
+        CHIP:
+            erase_unit := core#CHIP_ERASE
+        OTHER:
+            return FALSE
+    writeReg(erase_unit, 0, 0)
+
 PUB GlobalUnlock
 
-    writeReg(core#GLOBAL_BLOCK_UNLOCK, 1, 0)
+    writeReg(core#GLOBAL_BLOCK_UNLOCK, 0, 0)
 
 PUB JEDECID
 ' Read the JEDEC ID from the flash chip
@@ -159,6 +192,13 @@ PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet, cmd_bytes, tmp
             cmd_packet.byte[1] := reg.byte[3]   '   address A23..A16
             cmd_packet.byte[2] := reg.byte[2]   '   address A15..A8
             cmd_packet.byte[3] := reg.byte[1]   '   address A7..A0
+        core#SECTOR_ERASE, core#BLOCK32_ERASE, core#BLOCK64_ERASE, core#CHIP_ERASE, core#CHIP_ERASE2:
+            cmd_bytes := 4
+            cmd_packet.byte[0] := reg.byte[0]   ' Erase Flash
+            cmd_packet.byte[1] := reg.byte[3]   '   address A23..A16
+            cmd_packet.byte[2] := reg.byte[2]   '   address A15..A8
+            cmd_packet.byte[3] := reg.byte[1]   '   address A7..A0
+
         core#GLOBAL_BLOCK_UNLOCK:
             cmd_bytes := 1
             cmd_packet.byte[0] := reg.byte[0]

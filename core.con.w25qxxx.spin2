@@ -23,7 +23,17 @@ CON
     PAGE_PROG                   = $02
     READ_DATA                   = $03
     WRITE_DISABLE               = $04
+
     READ_STATUS1                = $05
+        FLD_SRP                 = 7
+        FLD_SEC                 = 6
+        FLD_TB                  = 5
+        FLD_BP                  = 2
+        FLD_WEL                 = 1
+        FLD_BUSY                = 0
+        BITS_BP                 = %111
+        FLAG_BUSY               = %1
+
     WRITE_ENABLE                = $06
     FAST_READ                   = $0B
     WRITE_STATUS3               = $11

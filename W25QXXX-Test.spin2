@@ -33,7 +33,7 @@ VAR
 
     long _ser_cog, _mem_cog
 
-PUB Main | uid[2], base, seg, offs, rd_tmp, lines, i, tmp
+PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp
 
     Setup
 
@@ -43,18 +43,8 @@ PUB Main | uid[2], base, seg, offs, rd_tmp, lines, i, tmp
     mem.UID(@uid)
     ser.printf("UID: %x%x\n", uid[0], uid[1])
 
-    lines := 0
     mem.WritesEnabled(FALSE)
     ser.printf("Writes enabled? %d\n", mem.WritesEnabled)
-
-    mem.GlobalUnlock
-    mem.WritesEnabled(TRUE)
-    ser.printf("Writes enabled? %d ", mem.WritesEnabled)
-
-    tmp := $DE_AD_BE_EF
-    repeat i from $00_00_10 to $00_00_13
-        mem.WritesEnabled(TRUE)
-        mem.WriteByte(i, tmp.byte[3-i])
 
     seg := base := 0
     ser.position(0, 10)
@@ -67,30 +57,69 @@ PUB Main | uid[2], base, seg, offs, rd_tmp, lines, i, tmp
             ser.char(" ")
         ser.newline
         seg += 16
-        lines++
-        if lines > 15
-            lines := 0
+        if seg > 255
+            seg := 0
             case ser.CharIn
                 "[":
-                    base := base - 640
+                    base := base - 256
                     if base < 0
                         base := 0
-                    seg := 0
                 "]":
-                    base := base + 640
-                    if base > $FF_FD_7F
-                        base := $FF_FD_7F
-                    seg := 0
+                    base := base + 256
+                    if base > $FF_FF_00
+                        base := $FF_FF_00
                 "e":
-                    base := $FF_FD_7F
-                    seg := 0
+                    base := $FF_FF_00
                 "s":
                     base := 0
-                    seg := 0
+                "x":
+                    EraseSector(base)
+                "w":
+                    WriteTest(base)
+                "q":
+                    ser.printf("Halting\n")
+                    quit
                 OTHER:
             ser.Position(0, 10)
 
     Flash(LED, 100)     ' Signal execution finished
+
+PUB EraseSector(start_addr) | s, e
+
+    mem.WritesEnabled(TRUE)
+    MessageWritesEna
+
+    ser.printf("Erasing...")
+    s := cnt
+    mem.Erase(mem#SECTOR, start_addr)
+    repeat until not mem.Busy
+    e := cnt-s
+    ser.printf("done (%d cycles).\n", e)
+    ser.Clear(ser#CLR_CUR_TO_END)
+
+PUB WriteTest(start_addr) | i, s, e, tmp
+
+    mem.WritesEnabled(TRUE)
+    MessageWritesEna
+
+    tmp := $DE_AD_BE_EF
+    ser.printf("Writing test value...")
+    s := cnt
+    repeat i from start_addr to start_addr + 3
+        mem.WritesEnabled(TRUE)
+        mem.WriteByte(i, tmp.byte[3-i])
+    e := cnt-s
+    ser.printf("done (%d cycles).\n", e)
+    ser.Clear(ser#CLR_CUR_TO_END)
+
+PUB MessageWritesEna
+
+    ser.printf("Writes enabled? ")
+    case mem.WritesEnabled
+        TRUE:
+            ser.printf("Yes\n")
+        FALSE:
+            ser.printf("No\n")
 
 PUB Setup
     clkset(ENAFREQ, CLOCKFREQ, XSEL)
