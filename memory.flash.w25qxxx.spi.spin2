@@ -53,6 +53,10 @@ PUB DeviceID
     readReg(core#MANUF_DEV_ID, 2, @result)
     result >>= 8
 
+PUB GlobalUnlock
+
+    writeReg(core#GLOBAL_BLOCK_UNLOCK, 1, 0)
+
 PUB JEDECID
 ' Read the JEDEC ID from the flash chip
     readReg(core#JEDEC_ID, 3, @result)
@@ -62,14 +66,47 @@ PUB ManufacturerID
 '   Known values: $EF (Winbond)
     readReg(core#MANUF_DEV_ID, 1, @result)
 
-PUB ReadByte(flash_addr) | tmp
+PUB ReadByte(flash_addr)
 ' Read a byte of data from flash
     readReg(core#READ_DATA | (flash_addr << 8), 1, @result)
+
+PRI readStatusReg(reg_nr) | tmp
+' Read status register
+'   Valid values: 1, 2, 3
+'   Any other value polls the chip and returns the current setting
+    case_fast reg_nr
+        1, 2, 3:
+            reg_nr := lookup(reg_nr: core#READ_STATUS1, core#READ_STATUS2, core#READ_STATUS3)
+        OTHER:
+            return FALSE
+    readReg(reg_nr, 1, @result)
 
 PUB UID(buff_addr)
 ' Read unique 64-bit ID/serial number
 '   NOTE: Buffer at buff_addr must be at least 8 bytes in length
     readReg(core#UNIQUE_ID, 8, buff_addr)
+
+PUB WriteByte(flash_addr, val) | tmp
+' Write one byte to the flash chip
+'   NOTE: WriteEnable must be called first before performing any writes
+'       The request will be ignored, otherwise
+    writeReg(core#PAGE_PROG | (flash_addr << 8), 1, @val)
+    return core#PAGE_PROG | (flash_addr << 8)
+
+PUB WritesEnabled(enabled=-2) | tmp
+' Enable writes to flash chip (page programming, sector/block/chip erase, write status reg, erase/program security registers)
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(core#READ_STATUS1, 1, @tmp)
+    case_fast ||enabled
+        0, 1:
+            enabled := lookupz(||enabled: core#WRITE_DISABLE, core#WRITE_ENABLE)
+        OTHER:
+            result := ((tmp >> 1) & %1) * TRUE
+            return
+
+    writeReg(enabled, 0, 0)
 
 PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet[2], cmd_bytes, tmp
 ' Read nr_bytes from register 'reg' to address 'buf_addr'
@@ -91,11 +128,13 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet[2], cmd_bytes, tmp
             cmd_packet.byte[4] := $00
         core#READ_DATA:
             cmd_bytes := 4
+            cmd_packet.byte[0] := reg.byte[0]   ' Read Flash
+            cmd_packet.byte[1] := reg.byte[3]   '   address A23..A16
+            cmd_packet.byte[2] := reg.byte[2]   '   address A15..A8
+            cmd_packet.byte[3] := reg.byte[1]   '   address A7..A0
+        core#READ_STATUS1, core#READ_STATUS2, core#READ_STATUS3:
+            cmd_bytes := 1
             cmd_packet.byte[0] := reg.byte[0]
-            cmd_packet.byte[1] := reg.byte[1]
-            cmd_packet.byte[2] := reg.byte[2]
-            cmd_packet.byte[3] := reg.byte[3]
-
         OTHER:
             cmd_bytes := 1
             cmd_packet.byte[0] := reg
@@ -108,11 +147,31 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet[2], cmd_bytes, tmp
         byte[buff_addr][tmp] := spi.Read(_MISO, _SCK, core#MISO_BITORDER, 8)
     io.High(_CS)
 
-PRI writeReg(reg, nr_bytes, buff_addr) | tmp
+PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet, cmd_bytes, tmp
 ' Write nr_bytes to register 'reg' stored at buf_addr
+    case reg.byte[0]
+        core#WRITE_ENABLE, core#WRITE_DISABLE:
+            cmd_bytes := 1
+            cmd_packet.byte[0] := reg.byte[0]
+        core#PAGE_PROG:
+            cmd_bytes := 4
+            cmd_packet.byte[0] := reg.byte[0]   ' Write Flash
+            cmd_packet.byte[1] := reg.byte[3]   '   address A23..A16
+            cmd_packet.byte[2] := reg.byte[2]   '   address A15..A8
+            cmd_packet.byte[3] := reg.byte[1]   '   address A7..A0
+        core#GLOBAL_BLOCK_UNLOCK:
+            cmd_bytes := 1
+            cmd_packet.byte[0] := reg.byte[0]
+
+        OTHER:
 
     io.Low(_CS)
-    spi.Write(_MOSI, _SCK, core#MOSI_BITORDER, 8, reg)
+    repeat tmp from 0 to cmd_bytes-1
+        spi.Write(_MOSI, _SCK, core#MOSI_BITORDER, 8, cmd_packet.byte[tmp])
+
+    if nr_bytes == 0
+        io.High(_CS)
+        return
 
     repeat tmp from 0 to nr_bytes-1
         spi.Write(_MOSI, _SCK, core#MOSI_BITORDER, 8, byte[buff_addr][tmp])

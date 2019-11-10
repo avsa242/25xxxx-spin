@@ -33,7 +33,7 @@ VAR
 
     long _ser_cog, _mem_cog
 
-PUB Main | uid[2], addr, offs, rd_tmp, lines
+PUB Main | uid[2], base, seg, offs, rd_tmp, lines, i, tmp
 
     Setup
 
@@ -41,22 +41,53 @@ PUB Main | uid[2], addr, offs, rd_tmp, lines
     ser.printf("Mfr ID: %x\n", mem.ManufacturerID)
     ser.printf("JEDEC ID: %x\n", mem.JEDECID)
     mem.UID(@uid)
-    ser.printf("UID: %x%x", uid[0], uid[1])
+    ser.printf("UID: %x%x\n", uid[0], uid[1])
 
     lines := 0
+    mem.WritesEnabled(FALSE)
+    ser.printf("Writes enabled? %d\n", mem.WritesEnabled)
 
+    mem.GlobalUnlock
+    mem.WritesEnabled(TRUE)
+    ser.printf("Writes enabled? %d ", mem.WritesEnabled)
+
+    tmp := $DE_AD_BE_EF
+    repeat i from $00_00_10 to $00_00_13
+        mem.WritesEnabled(TRUE)
+        mem.WriteByte(i, tmp.byte[3-i])
+
+    seg := base := 0
     ser.position(0, 10)
-    repeat addr from 0 to 16777215 step 16
-        ser.printf("%x: ", addr)
+
+    repeat
+        ser.printf("%x: ", base + seg)
         repeat offs from 0 to 15
-            rd_tmp := mem.ReadByte(addr+offs)
+            rd_tmp := mem.ReadByte(base + seg + offs)
             ser.hex(rd_tmp, 2)
             ser.char(" ")
-        ser.Newline
+        ser.newline
+        seg += 16
         lines++
-        if lines > 40
+        if lines > 15
             lines := 0
-            ser.CharIn
+            case ser.CharIn
+                "[":
+                    base := base - 640
+                    if base < 0
+                        base := 0
+                    seg := 0
+                "]":
+                    base := base + 640
+                    if base > $FF_FD_7F
+                        base := $FF_FD_7F
+                    seg := 0
+                "e":
+                    base := $FF_FD_7F
+                    seg := 0
+                "s":
+                    base := 0
+                    seg := 0
+                OTHER:
             ser.Position(0, 10)
 
     Flash(LED, 100)     ' Signal execution finished
