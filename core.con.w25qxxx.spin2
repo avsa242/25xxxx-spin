@@ -19,10 +19,46 @@ CON
     MISO_BITORDER               = 0             'MSBPRE
 
 ' Register definitions
+    WRITE_STATUS1               = $01
+    PAGE_PROG                   = $02
+    READ_DATA                   = $03
+    WRITE_DISABLE               = $04
+    READ_STATUS1                = $05
+    WRITE_ENABLE                = $06
+    FAST_READ                   = $0B
+    WRITE_STATUS3               = $11
+    READ_STATUS3                = $15
+    SECTOR_ERASE                = $20
+    WRITE_STATUS2               = $31
+    QUAD_PAGE_PROG              = $32
+    READ_STATUS2                = $35
+    INDIVIDUAL_BLOCK_LOCK       = $36
+    ENTER_QPIMODE               = $38
+    INDIVIDUAL_BLOCK_UNLOCK     = $39
+    FASTREAD_DUAL               = $3B
+    READ_BLOCK_LOCK             = $3D
+    PROG_SECURITY               = $42
+    ERASE_SECURITY              = $44
+    READ_SECURITY               = $48
     UNIQUE_ID                   = $4B
+    VOLATILE_SR_WR_EN           = $50
+    BLOCK32_ERASE               = $52
+    READ_SFDP                   = $5A
+    CHIP_ERASE                  = $60
+    ENABLE_RESET                = $66
+    FASTREAD_QUAD               = $6B
+    ERASE_PROG_SUSP             = $75
+    BURST_WITH_WRAP             = $77
+    ERASE_PROG_RESUME           = $7A
+    GLOBAL_BLOCK_LOCK           = $7E
     MANUF_DEV_ID                = $90
+    GLOBAL_BLOCK_UNLOCK         = $98
+    RESET_DEVICE                = $99
     JEDEC_ID                    = $9F
-    DEVICE_ID                   = $AB
+    RELEASE_PWRDOWN             = $AB
+    POWER_DOWN                  = $B9
+    CHIP_ERASE2                 = $C7
+    BLOCK64_ERASE               = $D8
 
 PUB Null
 ' This is not a top-level object
