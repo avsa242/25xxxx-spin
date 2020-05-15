@@ -57,7 +57,7 @@ PUB Startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, SCK_HZ, SCK_CPOL): okay
 PUB Busy
 ' Busy flag
 '   Returns: TRUE when flash chip is executing any of the following, FALSE otherwise:
-'       Page program, Erase, Write status reg_nr, Erase/Program security reg_nr
+'       Page program, Erase, Write status reg, Erase/Program security reg
     return (readStatusReg(1) & core#FLAG_BUSY) * TRUE
 
 PUB DeviceID
@@ -109,7 +109,7 @@ PUB ReadByte(flash_addr)
     readReg(core#READ_DATA | (flash_addr << 8), 1, @result)
 
 PRI readStatusReg(reg_nr) | tmp
-' Read status reg_nrister
+' Read status register
 '   Valid values: 1, 2, 3
 '   Any other value polls the chip and returns the current setting
     case_fast reg_nr
@@ -142,7 +142,7 @@ PUB WriteByte(flash_addr, val) | tmp
     return core#PAGE_PROG | (flash_addr << 8)
 
 PUB WritesEnabled(enabled=-2) | tmp
-' Enable writes to flash chip (page programming, sector/block/chip erase, write status reg_nr, erase/program security reg_nristers)
+' Enable writes to flash chip (page programming, sector/block/chip erase, write status reg, erase/program security registers)
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
     tmp := $00
