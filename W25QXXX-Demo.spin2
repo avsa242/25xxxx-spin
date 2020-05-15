@@ -13,16 +13,19 @@
 CON
 
     XTAL        = cfg#XTAL
-    XDIV        = cfg#XDIV
-    XMUL        = cfg#XMUL
+    XDIV        = 2
+    XMUL        = 16
     XDIVP       = cfg#XDIVP
     XOSC        = cfg#XOSC
     XSEL        = cfg#XSEL
     XPPPP       = cfg#XPPPP
-    CLOCKFREQ   = cfg#CLOCKFREQ
-    SETFREQ     = cfg#SETFREQ
-    ENAFREQ     = cfg#ENAFREQ
+    CLOCKFREQ   = XTAL / XDIV * XMUL / XDIVP
+    SETFREQ     = 1<<24 + (XDIV-1)<<18 + (XMUL-1)<<8 + XPPPP<<4 + XOSC<<2
+    ENAFREQ     = SETFREQ + XSEL
 
+    CYCLES_USEC = CLOCKFREQ / 1_000_000
+
+' User-modifiable constants
     LED         = cfg#LED1
     SER_RX      = cfg#SER_RX
     SER_TX      = cfg#SER_TX
@@ -32,6 +35,7 @@ CON
     SCK         = 60
     MOSI        = 59
     MISO        = 58
+    SCK_FREQ    = 10_000_000
 
 OBJ
 
@@ -64,15 +68,10 @@ PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp, s, e
 
 ' Page method
     repeat
-        s := cnt
+        s := getct()
         flash.ReadBlock(base, 256, @_page)
-        e := cnt-s
-        repeat seg from 0 to 239 step 16
-            ser.printf("%x: ", base + seg)
-            repeat offs from 0 to 15
-                ser.hex(_page[seg + offs], 2)
-                ser.char(" ")
-            ser.newline
+        e := getct()-s
+        ser.Hexdump(@_page, base, 256, 16, 0, 10)
 
         case ser.CharIn
             "[":
@@ -96,9 +95,9 @@ PUB Main | uid[2], base, seg, offs, rd_tmp, i, tmp, s, e
                 quit
             OTHER:
         MessageWritesEna
-        ser.printf("Reading done (%d cycles).\n", e)
-        ser.Clear(ser#CLR_CUR_TO_END)
-        ser.Position(0, 10)
+        ser.printf("Reading done (%d cycles/%dns).\n", e, CyclesTonsec(e))
+        ser.ClearLine
+'        ser.Position(0, 10)
 
 {' Byte method
     repeat
@@ -142,43 +141,48 @@ PUB EraseSector(start_addr) | s, e
     MessageWritesEna
 
     ser.printf("Erasing...")
-    s := cnt
+    s := getct()
     flash.Erase(flash#SECTOR, start_addr)
     repeat until not flash.Busy
-    e := cnt-s
-    ser.printf("done (%d cycles).\n", e)
-    ser.Clear(ser#CLR_CUR_TO_END)
+    e := getct()-s
+    ser.printf("done (%d cycles/%dns).\n", e, CyclesTonsec(e))
+    ser.ClearLine
 
 PUB WriteTest(start_addr) | i, s, e, tmp
 
     tmp := $DE_AD_BE_EF
     ser.printf("Writing test value...")
     repeat until not flash.Busy
-    s := cnt
+    s := getct()
     repeat i from 0 to 3
         flash.WritesEnabled(TRUE)
         MessageWritesEna
         flash.WriteByte(start_addr + i, tmp.byte[3-i])
-    e := cnt-s
-    ser.printf("done (%d cycles).\n", e)
-    ser.Clear(ser#CLR_CUR_TO_END)
+    e := getct()-s
+    ser.printf("done (%d cycles/%dns).\n", e, CyclesTonsec(e))
+    ser.ClearLine
+
+PUB CyclesTonsec(cycles)
+
+    return cycles / CYCLES_USEC
 
 PUB MessageWritesEna
 
-    ser.printf("Writes enabled? ")
+    ser.printf("\nWrites enabled? ")
     case flash.WritesEnabled
         TRUE:
             ser.printf("Yes\n")
         FALSE:
-            ser.printf("No\n")
+            ser.printf("No \n")
+    ser.ClearLine
 
 PUB Setup
     clkset(ENAFREQ, CLOCKFREQ)
     repeat until _ser_cog := ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
     ser.Clear
-    ser.PrintF("Serial terminal started\n")
-    if _flash_cog := flash.Startx (CS, SCK, MOSI, MISO, 5_000_000, 0)
-        ser.Printf("W25Qxxx driver started\n")
+    ser.PrintF("Serial terminal started (P2 @%dMHz)\n", clockfreq / 1_000_000)
+    if _flash_cog := flash.Startx (CS, SCK, MOSI, MISO, SCK_FREQ, 0)
+        ser.Printf("W25Qxxx driver started (SPI @%dMHz)\n", SCK_FREQ/1_000_000)
     else
         ser.Printf("W25Qxxx driver failed to start - halting\n")
         FlashLED(LED, 500)

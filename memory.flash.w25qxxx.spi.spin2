@@ -49,8 +49,10 @@ PUB Startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, SCK_HZ, SCK_CPOL): okay
             _SCK := SCK_PIN
 
             io.High(_CS)
+            io.Output(_CS)
 
-            return okay
+            if DeviceID == $17
+                return okay
 
     return FALSE                                                'If we got here, something went wrong
 
