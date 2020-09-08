@@ -1,8 +1,8 @@
 {
     --------------------------------------------
-    Filename: memory.flash.w25qxxx.spi.spin2
+    Filename: memory.flash.25xxxx.spi.spin2
     Author: Jesse Burt
-    Description: Driver for the Winbond W25Qxxx-series SPI FLASH memories
+    Description: Driver for 25xxxx-series SPI flash memories
     Copyright (c) 2020
     Started Nov 09, 2019
     Updated Jun 14, 2020
@@ -27,7 +27,7 @@ VAR
 OBJ
 
     spi : "com.spi.bitbang-fast"
-    core: "core.con.w25qxxx"
+    core: "core.con.25xxxx"
     time: "time"
     io  : "io"
 

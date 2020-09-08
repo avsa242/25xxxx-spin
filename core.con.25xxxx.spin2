@@ -1,6 +1,6 @@
 {
     --------------------------------------------
-    Filename: core.con.w25qxxx.spin2
+    Filename: core.con.25xxxx.spin2
     Author: Jesse Burt
     Description: Low-level constants
     Copyright (c) 2020
@@ -70,7 +70,7 @@ CON
     CHIP_ERASE2                 = $C7
     BLOCK64_ERASE               = $D8
 
-PUB Null
+PUB Null()
 ' This is not a top-level object
 
 DAT
