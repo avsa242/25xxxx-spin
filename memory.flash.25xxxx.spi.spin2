@@ -51,11 +51,16 @@ PUB Start(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, SCK_HZ): okay
 
     return FALSE                                                'If we got here, something went wrong
 
-PUB Busy(): result
-' Busy flag
-'   Returns: TRUE when flash chip is executing any of the following, FALSE otherwise:
-'       Page program, Erase, Write status reg, Erase/Program security reg
-    return (readStatusReg(1) & core.FLAG_BUSY) * TRUE
+PUB Busy(): flag
+' Flag indicating flash chip is busy executing an operation
+'   Returns:
+'       TRUE (-1) when flash chip is executing any of the following:
+'           Page program
+'           Erase
+'           Write status reg
+'           Erase/Program security reg
+'       FALSE (0) otherwise
+    return ((readstatusreg(1) & core.FLAG_BUSY)) == 1
 
 PUB DeviceID(): result
 ' Read the device ID from the flash chip
