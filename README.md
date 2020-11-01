@@ -7,7 +7,7 @@ This is a P2X8C4M64P/Propeller 2 driver object for 25xxxx-series flash memories
 
 ## Salient Features
 
-* SPI connection at up to 6.5MHz
+* SPI connection at up to 20MHz (tested at 160MHz fSYS), 30MHz (250MHz)
 * Read device ID, Mfr. ID, JEDEC ID
 * Read, write a byte
 * Read, write a block (write limited to a page per transaction - 256 bytes)
@@ -21,7 +21,7 @@ P2/SPIN2:
 
 ## Compiler Compatibility
 
-* P2/SPIN2: FastSpin (tested with 4.1.10-beta)
+* P2/SPIN2: FastSpin (tested with 5.0.0)
 * ~~PNut~~ (incompatible - no preprocessor)
 
 ## Limitations
@@ -30,6 +30,7 @@ P2/SPIN2:
 * Single-lane SPI only (no Dual-SPI or Quad-SPI - unplanned, for now)
 * SPI driver is relatively slow, compared to memory's capability; not suitable for high-performance applications
 * Developed using 128Mbit part found on Parallax P2 Evaluation board - some methods may currently have hardcoded settings with this specific density chip in mind
+* Tested only with Winbond W25Q128
 
 ## TODO
 
