@@ -62,10 +62,10 @@ PUB Busy(): flag
 '       FALSE (0) otherwise
     return ((readstatusreg(1) & core.FLAG_BUSY)) == 1
 
-PUB DeviceID(): result
+PUB DeviceID(): id
 ' Read the device ID from the flash chip
-    readReg(core.MANUF_DEV_ID, 2, @result)
-    result >>= 8
+    readreg(core.MANUF_DEV_ID, 2, @id)
+    id >>= 8                                    ' grab MSByte only
 
 PUB Erase(erase_unit, flash_addr) | tmp
 ' Erase flash memory starting at flash_addr, of size erase_unit
