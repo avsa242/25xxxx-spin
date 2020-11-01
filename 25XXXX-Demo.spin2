@@ -5,7 +5,7 @@
     Description: Demo app for the 25xxxx driver
     Copyright (c) 2020
     Started Nov 09, 2019
-    Updated Jul 13, 2020
+    Updated Nov 1, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -34,8 +34,6 @@ OBJ
 
     ser         : "com.serial.terminal.ansi"
     cfg         : "core.con.boardcfg.p2eval"
-    io          : "io"
-    time        : "time"
     flash       : "memory.flash.25xxxx.spi"
 
 VAR
@@ -88,7 +86,7 @@ PUB Main() | uid[2], base, seg, offs, rd_tmp, i, tmp, s, e
                 quit
             OTHER:
         MessageWritesEna()
-        ser.printf("Reading done (%d cycles/%dns).\n", e, CyclesTonsec(e))
+        ser.printf("Reading done (%d cycles/%dus).\n", e, cycles_to_us(e))
         ser.ClearLine()
 '        ser.Position(0, 10)
 
@@ -126,7 +124,6 @@ PUB Main() | uid[2], base, seg, offs, rd_tmp, i, tmp, s, e
                 OTHER:
             ser.Position(0, 10)
 }
-    FlashLED(LED, 100)     ' Signal execution finished
 
 PUB EraseSector(start_addr) | s, e
 
@@ -138,7 +135,7 @@ PUB EraseSector(start_addr) | s, e
     flash.Erase(flash.SECTOR, start_addr)
     repeat until not flash.Busy()
     e := getct()-s
-    ser.printf("done (%d cycles/%dns).\n", e, CyclesTonsec(e))
+    ser.printf("done (%d cycles/%dus).\n", e, cycles_to_us(e))
     ser.ClearLine()
 
 PUB WriteTest(start_addr) | i, s, e, tmp
@@ -147,15 +144,15 @@ PUB WriteTest(start_addr) | i, s, e, tmp
     ser.printf("Writing test value...")
     repeat until not flash.Busy()
     s := getct()
-    repeat i from 0 to 3
-        flash.WritesEnabled(TRUE)
-        MessageWritesEna()
-        flash.WriteByte(start_addr + i, tmp.byte[3-i])
+    flash.writesenabled(true)
+    messagewritesena()
+    flash.writeblock(start_addr + i, 4, @tmp)
+
     e := getct()-s
-    ser.printf("done (%d cycles/%dns).\n", e, CyclesTonsec(e))
+    ser.printf("done (%d cycles/%dus).\n", e, cycles_to_us(e))
     ser.ClearLine()
 
-PUB CyclesTonsec(cycles): nsec
+PUB Cycles_to_uS(cycles): usec
 
     return cycles / CYCLES_USEC
 
@@ -178,9 +175,6 @@ PUB Setup()
         ser.Printf("25xxxx driver started (SPI @%dMHz)\n", SCK_FREQ/1_000_000)
     else
         ser.Printf("25xxxx driver failed to start - halting\n")
-        FlashLED(LED, 500)
-
-#include "lib.utility.spin2"
 
 DAT
 {
