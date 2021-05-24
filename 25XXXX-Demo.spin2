@@ -13,7 +13,7 @@
 CON
 
     _xtlfreq    = cfg._xtlfreq
-    _clkfreq    = 160_000_000
+    _clkfreq    = 200_000_000
 
     CYCLES_USEC = _clkfreq / 1_000_000
 
@@ -68,7 +68,8 @@ PUB Main() | uid[2], base, seg, s, e
         s := getct()
         flash.readblock(base, PAGE_SIZE, @_page)
         e := getct()-s
-        ser.hexdump(@_page, base, PAGE_SIZE, HEX_COLS, HEX_X, HEX_Y)
+        ser.position(HEX_X, HEX_Y)
+        ser.hexdump(@_page, base, 6, PAGE_SIZE, HEX_COLS)
 
         case ser.charin()
             "[":                                ' read previous flash page
@@ -142,7 +143,7 @@ PUB Setup()
     ser.start(SER_BAUD)
     ser.clear()
     ser.printf("Serial terminal started (P2 @%dMHz)\n", _clkfreq / 1_000_000)
-    if flash.start(CS, SCK, MOSI, MISO, SCK_FREQ)
+    if flash.startx(CS, SCK, MOSI, MISO, SCK_FREQ)
         ser.printf("25xxxx driver started (SPI @%dMHz)\n", SCK_FREQ / 1_000_000)
     else
         ser.printf("25xxxx driver failed to start - halting\n")

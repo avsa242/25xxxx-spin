@@ -3,22 +3,22 @@
     Filename: memory.flash.25xxxx.spi.spin2
     Author: Jesse Burt
     Description: Driver for 25xxxx-series SPI flash memories
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Nov 09, 2019
-    Updated Nov 1, 2020
+    Updated May 24, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
 
 CON
 
-    DEF_SPI_CLK         = 1_000_000
+    DEF_SPI_CLK = 1_000_000
 
 ' Erase units
-    SECTOR              = 1     '4KB
-    BLK32             = 2     '32KB
-    BLK64             = 3     '64KB
-    CHIP                = 4     'Entire chip
+    SECTOR      = 1     '4KB
+    BLK32       = 2     '32KB
+    BLK64       = 3     '64KB
+    CHIP        = 4     'Entire chip
 
 VAR
 
@@ -26,15 +26,13 @@ VAR
 
 OBJ
 
-    spi : "com.spi"
-    core: "core.con.25xxxx"
-    time: "time"
-    io  : "io"
+    spi : "com.spi"                             ' smart-pin SPI engine
+    core: "core.con.25xxxx"                     ' HW-specific constants
 
 PUB Null()
-''This is not a top-level object
+' This is not a top-level object
 
-PUB Start(CS, SCK, MOSI, MISO, SCK_HZ): okay
+PUB Startx(CS, SCK, MOSI, MISO, SCK_HZ=DEF_SPI_CLK): status
 ' Start driver using SPI interface
 '   CS: SPI chip-select
 '   SCK: SPI SCK/clock pin
@@ -42,17 +40,22 @@ PUB Start(CS, SCK, MOSI, MISO, SCK_HZ): okay
 '   MISO: SPI MISO/Device to Propeller
 '   All pin assignments must be unique and in the range 0..63
 '   SCK_FREQ: SPI bus frequency (device and SPI-engine specific)
-    if lookdown(CS: 0..63) and lookdown(SCK: 0..63) and lookdown(MOSI: 0..63) and lookdown(MISO: 0..63)
-        if SCK_HZ >= 1 and SCK_HZ <= core.SCK_MAX_FREQ
-            if okay := spi.start(SCK, MOSI, MISO, SCK_HZ)
-                waitus(core.TPUW)               ' wait using worst case figure
-                _CS := CS
+    if lookdown(CS: 0..63) and lookdown(SCK: 0..63) and lookdown(MOSI: 0..63) {
+}   and lookdown(MISO: 0..63) and lookdown(SCK_HZ: 1..core.SCK_MAX_FREQ)
+        if (status := spi.init(SCK, MOSI, MISO, SCK_HZ, core.SPI_MODE))
+            waitus(core.T_POR)                  ' wait for device startup
+            _CS := CS
+            pinh(_CS)
+            if deviceid() == core.W25Q128FV
+                return
+    ' if this point is reached, something above failed
+    ' Double check I/O pin assignments, connections, power
+    ' Lastly - make sure you have at least one free core/cog
+    return FALSE
 
-                pinh(_CS)
-                if deviceid() == core.W25Q128FV
-                    return okay
+PUB Stop()
 
-    return FALSE                                ' something above failed
+    spi.deinit()
 
 PUB Busy(): flag
 ' Flag indicating flash chip is busy executing an operation
@@ -70,26 +73,28 @@ PUB DeviceID(): id
     readreg(core.MANUF_DEV_ID, 2, @id)
     id >>= 8                                    ' grab MSByte only
 
-PUB Erase(erase_unit, flash_addr) | tmp
-' Erase flash memory starting at flash_addr, of size erase_unit
-'   Valid values:
+PUB Erase(er_sz, fl_addr)
+' Erase flash memory starting at fl_addr, of size er_sz
+'   Valid values (er_sz):
 '       SECTOR (1) - Erase 4kBytes
 '       BLK32 (2) - Erase 32kBytes
 '       BLK64 (3) - Erase 64kBytes
 '       CHIP (4) - Erase entire chip
 '   Any other value is ignored
-'   NOTE: flash_addr is ignored when erase_unit is CHIP
-'   NOTE: Prior to calling this method, writes must be enabled with WritesEnabled(TRUE)
+'   NOTE: fl_addr is ignored when er_sz is CHIP
+'   NOTE: Prior to calling this method, writes must be enabled with
+'       WritesEnabled(TRUE)
 '   NOTE: Erased state of a flash cell is $FF
-    case erase_unit
+    case er_sz
         SECTOR, BLK32, BLK64:
-            erase_unit := lookup(erase_unit: core.SECTOR_ERASE, core.BLK32_ERASE, core.BLK64_ERASE)
-            erase_unit |= (flash_addr << 8)
+            er_sz := lookup(er_sz: core.SECTOR_ERASE, core.BLK32_ERASE, {
+}           core.BLK64_ERASE)
+            er_sz |= (fl_addr << 8)
         CHIP:
-            erase_unit := core.CHIP_ERASE
+            er_sz := core.CHIP_ERASE
         other:
-            return FALSE
-    writereg(erase_unit, 0, 0)
+            return
+    writereg(er_sz, 0, 0)
 
 PUB GlobalUnlock()
 
@@ -104,76 +109,64 @@ PUB ManufacturerID(): id
 '   Known values: $EF (Winbond)
     readreg(core.MANUF_DEV_ID, 1, @id)
 
-PUB ReadBlock(flash_start_addr, nr_bytes, ptr_buff)
+PUB ReadBlock(fl_addr, nr_bytes, ptr_buff)
 ' Read a block of bytes from the flash chip
 '   NOTE: If the operation reaches the end of the flash chip, the address will restart at 0 and continue reading
-    readmem(flash_start_addr, nr_bytes, ptr_buff)
+    readmem(fl_addr, nr_bytes, ptr_buff)
 
-PUB ReadByte(flash_addr): fl_byte
+PUB ReadByte(fl_addr): fl_byte
 ' Read a byte of data from flash
-    readmem(flash_addr, 1, @fl_byte)
+    readmem(fl_addr, 1, @fl_byte)
 
 PUB UID(ptr_buff)
 ' Read unique 64-bit ID/serial number
 '   NOTE: Buffer at ptr_buff must be at least 8 bytes in length
     readreg(core.UNIQUE_ID, 8, ptr_buff)
 
-PUB WriteBlock(flash_st_addr, nr_bytes, ptr_buff)
+PUB WriteBlock(fl_addr, nr_bytes, ptr_buff)
 ' Write a block of data to the flash chip
 '   Valid values:
 '       nr_bytes: 1..256
 '   Any other value will be ignored
     if lookdown(nr_bytes: 1..256)
-        writereg(core.PAGE_PROG | (flash_st_addr << 8), nr_bytes, ptr_buff)
+        writereg(core.PAGE_PROG | (fl_addr << 8), nr_bytes, ptr_buff)
     else
         return
 
-PUB WriteByte(flash_addr, val) | tmp
+PUB WriteByte(fl_addr, val)
 ' Write one byte to the flash chip
 '   NOTE: WriteEnable must be called first before performing any writes
 '       The request will be ignored, otherwise
-    writereg(core.PAGE_PROG | (flash_addr << 8), 1, @val)
+    writereg(core.PAGE_PROG | (fl_addr << 8), 1, @val)
 
-PUB WritesEnabled(enabled=-2): curr_state
+PUB WritesEnabled(state=-2): curr_state
 ' Enable writes to flash chip (page programming, sector/block/chip erase, write status reg, erase/program security registers)
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := $00
+    curr_state := 0
     readreg(core.READ_STATUS1, 1, @curr_state)
-    case_fast abs(enabled)
+    case_fast abs(state)
         0, 1:
-            enabled := lookupz(abs(enabled): core.WRITE_DISABLE, core.WRITE_ENABLE)
+            state := lookupz(abs(state): core.WRITE_DISABLE, core.WRITE_ENABLE)
         other:
-            return ((curr_state >> 1) & %1) == 1
+            return ((curr_state >> 1) & 1) == 1
 
-    writereg(enabled, 0, 0)
+    writereg(state, 0, 0)
 
 PRI readMem(addr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 
-    cmd_pkt.byte[0] := core.READ_DATA   ' Read Flash
-    cmd_pkt.byte[1] := addr.byte[2]   '   address A23..A16
-    cmd_pkt.byte[2] := addr.byte[1]   '   address A15..A8
-    cmd_pkt.byte[3] := addr.byte[0]   '   address A7..A0
+    cmd_pkt.byte[0] := core.READ_DATA           ' Read Flash
+    cmd_pkt.byte[1] := addr.byte[2]             '   address A23..A16
+    cmd_pkt.byte[2] := addr.byte[1]             '   address A15..A8
+    cmd_pkt.byte[3] := addr.byte[0]             '   address A7..A0
     pinl(_CS)
-    spi.writebytes(4, @cmd_pkt)
-    spi.readbytes(nr_bytes, ptr_buff)
-'    repeat tmp from 0 to nr_bytes-1
-'        byte[ptr_buff][tmp] := spi.read()
+    spi.wrblock_lsbf(@cmd_pkt, 4)
+    spi.rdblock_lsbf(ptr_buff, nr_bytes)
     pinh(_CS)
 
-PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt[2], cmd_bytes, tmp
+PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt[2], cmd_bytes
 ' Read nr_bytes from device into ptr_buff
-    case_fast reg_nr.byte[0]                         ' basic reg # validation
-        core.READ_DATA:
-            cmd_bytes := 4
-            cmd_pkt.byte[0] := reg_nr.byte[0]   ' Read Flash
-            cmd_pkt.byte[1] := reg_nr.byte[3]   '   address A23..A16
-            cmd_pkt.byte[2] := reg_nr.byte[2]   '   address A15..A8
-            cmd_pkt.byte[3] := reg_nr.byte[1]   '   address A7..A0
-            pinl(_CS)
-            spi.writebytes(cmd_bytes, @cmd_pkt)
-            spi.readbytes(nr_bytes, ptr_buff)
-            pinh(_CS)
+    case_fast reg_nr.byte[0]                    ' validate reg nr
         core.MANUF_DEV_ID:
             cmd_bytes := 4
             cmd_pkt.byte[0] := reg_nr
@@ -195,10 +188,8 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt[2], cmd_bytes, tmp
             cmd_pkt.byte[0] := reg_nr
 
     pinl(_CS)
-    spi.writebytes(cmd_bytes, @cmd_pkt)
-
-    repeat tmp from 0 to nr_bytes-1
-        byte[ptr_buff][tmp] := spi.read()
+    spi.wrblock_lsbf(@cmd_pkt, cmd_bytes)
+    spi.rdblock_lsbf(ptr_buff, nr_bytes)
     pinh(_CS)
 
 PRI readStatusReg(reg_nr): status | tmp
@@ -231,22 +222,21 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, cmd_bytes
             cmd_pkt.byte[1] := reg_nr.byte[3]   '   address A23..A16
             cmd_pkt.byte[2] := reg_nr.byte[2]   '   address A15..A8
             cmd_pkt.byte[3] := reg_nr.byte[1]   '   address A7..A0
-
         core.GLOBAL_BLK_UNLOCK:
             cmd_bytes := 1
             cmd_pkt.byte[0] := reg_nr.byte[0]
-
         other:
 
     pinl(_CS)
-    spi.writebytes(cmd_bytes, @cmd_pkt)
+    spi.wrblock_lsbf(@cmd_pkt, cmd_bytes)
 
     if nr_bytes == 0                            ' simple command, no data,
         pinh(_CS)                               ' so just deselect and return
         return
 
-    spi.writebytes(nr_bytes, ptr_buff)
+    spi.wrblock_lsbf(ptr_buff, nr_bytes)
     pinh(_CS)
+
 DAT
 {
     --------------------------------------------------------------------------------------------------------
