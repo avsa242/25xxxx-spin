@@ -7,7 +7,7 @@ This is a P2X8C4M64P/Propeller 2 driver object for 25xxxx-series flash memories
 
 ## Salient Features
 
-* SPI connection at up to 20MHz (tested at 160MHz fSYS), 30MHz (250MHz)
+* SPI connection at up to 20MHz (tested at 200MHz fSYS - may work at higher SPI clocks - YMMV)
 * Read device ID, Mfr. ID, JEDEC ID
 * Read, write a byte
 * Read, write a block (write limited to a page per transaction - 256 bytes)
@@ -21,7 +21,7 @@ P2/SPIN2:
 
 ## Compiler Compatibility
 
-* P2/SPIN2: FastSpin (tested with 5.0.0)
+* P2/SPIN2: FlexSpin (tested with 5.5.0)
 * ~~PNut~~ (incompatible - no preprocessor)
 
 ## Limitations
@@ -39,3 +39,4 @@ P2/SPIN2:
 - [x] Add a simple hex dump demo
 - [ ] Add a simple backup to SD app
 - [ ] Add support for other density parts (may be untested)
+- [ ] Port to SPIN1/P1
