@@ -16,8 +16,8 @@ CON
 
 ' Erase units
     SECTOR              = 1     '4KB
-    BLOCK32             = 2     '32KB
-    BLOCK64             = 3     '64KB
+    BLK32             = 2     '32KB
+    BLK64             = 3     '64KB
     CHIP                = 4     'Entire chip
 
 VAR
@@ -49,7 +49,7 @@ PUB Start(CS, SCK, MOSI, MISO, SCK_HZ): okay
                 _CS := CS
 
                 pinh(_CS)
-                if deviceid() == $17
+                if deviceid() == core.W25Q128FV
                     return okay
 
     return FALSE                                ' something above failed
@@ -74,16 +74,16 @@ PUB Erase(erase_unit, flash_addr) | tmp
 ' Erase flash memory starting at flash_addr, of size erase_unit
 '   Valid values:
 '       SECTOR (1) - Erase 4kBytes
-'       BLOCK32 (2) - Erase 32kBytes
-'       BLOCK64 (3) - Erase 64kBytes
+'       BLK32 (2) - Erase 32kBytes
+'       BLK64 (3) - Erase 64kBytes
 '       CHIP (4) - Erase entire chip
 '   Any other value is ignored
 '   NOTE: flash_addr is ignored when erase_unit is CHIP
 '   NOTE: Prior to calling this method, writes must be enabled with WritesEnabled(TRUE)
 '   NOTE: Erased state of a flash cell is $FF
     case erase_unit
-        SECTOR, BLOCK32, BLOCK64:
-            erase_unit := lookup(erase_unit: core.SECTOR_ERASE, core.BLOCK32_ERASE, core.BLOCK64_ERASE)
+        SECTOR, BLK32, BLK64:
+            erase_unit := lookup(erase_unit: core.SECTOR_ERASE, core.BLK32_ERASE, core.BLK64_ERASE)
             erase_unit |= (flash_addr << 8)
         CHIP:
             erase_unit := core.CHIP_ERASE
@@ -93,7 +93,7 @@ PUB Erase(erase_unit, flash_addr) | tmp
 
 PUB GlobalUnlock()
 
-    writereg(core.GLOBAL_BLOCK_UNLOCK, 0, 0)
+    writereg(core.GLOBAL_BLK_UNLOCK, 0, 0)
 
 PUB JEDECID(): id
 ' Read the JEDEC ID from the flash chip
@@ -107,11 +107,11 @@ PUB ManufacturerID(): id
 PUB ReadBlock(flash_start_addr, nr_bytes, ptr_buff)
 ' Read a block of bytes from the flash chip
 '   NOTE: If the operation reaches the end of the flash chip, the address will restart at 0 and continue reading
-    readreg(core.READ_DATA | (flash_start_addr << 8), nr_bytes, ptr_buff)
+    readmem(flash_start_addr, nr_bytes, ptr_buff)
 
 PUB ReadByte(flash_addr): fl_byte
 ' Read a byte of data from flash
-    readreg(core.READ_DATA | (flash_addr << 8), 1, @fl_byte)
+    readmem(flash_addr, 1, @fl_byte)
 
 PUB UID(ptr_buff)
 ' Read unique 64-bit ID/serial number
@@ -148,9 +148,32 @@ PUB WritesEnabled(enabled=-2): curr_state
 
     writereg(enabled, 0, 0)
 
+PRI readMem(addr, nr_bytes, ptr_buff) | cmd_pkt, tmp
+
+    cmd_pkt.byte[0] := core.READ_DATA   ' Read Flash
+    cmd_pkt.byte[1] := addr.byte[2]   '   address A23..A16
+    cmd_pkt.byte[2] := addr.byte[1]   '   address A15..A8
+    cmd_pkt.byte[3] := addr.byte[0]   '   address A7..A0
+    pinl(_CS)
+    spi.writebytes(4, @cmd_pkt)
+    spi.readbytes(nr_bytes, ptr_buff)
+'    repeat tmp from 0 to nr_bytes-1
+'        byte[ptr_buff][tmp] := spi.read()
+    pinh(_CS)
+
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt[2], cmd_bytes, tmp
-' Read nr_bytes from reg_nr to ptr_buff
-    case reg_nr.byte[0]                         ' basic reg # validation
+' Read nr_bytes from device into ptr_buff
+    case_fast reg_nr.byte[0]                         ' basic reg # validation
+        core.READ_DATA:
+            cmd_bytes := 4
+            cmd_pkt.byte[0] := reg_nr.byte[0]   ' Read Flash
+            cmd_pkt.byte[1] := reg_nr.byte[3]   '   address A23..A16
+            cmd_pkt.byte[2] := reg_nr.byte[2]   '   address A15..A8
+            cmd_pkt.byte[3] := reg_nr.byte[1]   '   address A7..A0
+            pinl(_CS)
+            spi.writebytes(cmd_bytes, @cmd_pkt)
+            spi.readbytes(nr_bytes, ptr_buff)
+            pinh(_CS)
         core.MANUF_DEV_ID:
             cmd_bytes := 4
             cmd_pkt.byte[0] := reg_nr
@@ -164,12 +187,6 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt[2], cmd_bytes, tmp
             cmd_pkt.byte[2] := $00
             cmd_pkt.byte[3] := $00
             cmd_pkt.byte[4] := $00
-        core.READ_DATA:
-            cmd_bytes := 4
-            cmd_pkt.byte[0] := reg_nr.byte[0]   ' Read Flash
-            cmd_pkt.byte[1] := reg_nr.byte[3]   '   address A23..A16
-            cmd_pkt.byte[2] := reg_nr.byte[2]   '   address A15..A8
-            cmd_pkt.byte[3] := reg_nr.byte[1]   '   address A7..A0
         core.READ_STATUS1, core.READ_STATUS2, core.READ_STATUS3:
             cmd_bytes := 1
             cmd_pkt.byte[0] := reg_nr.byte[0]
@@ -196,7 +213,7 @@ PRI readStatusReg(reg_nr): status | tmp
     readreg(reg_nr, 1, @status)
 
 PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, cmd_bytes
-' Write nr_bytes to reg_nr stored at ptr_buff
+' Write nr_bytes to device from ptr_buff
     case reg_nr.byte[0]
         core.WRITE_ENABLE, core.WRITE_DISABLE:
             cmd_bytes := 1
@@ -207,7 +224,7 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, cmd_bytes
             cmd_pkt.byte[1] := reg_nr.byte[3]   '   address A23..A16
             cmd_pkt.byte[2] := reg_nr.byte[2]   '   address A15..A8
             cmd_pkt.byte[3] := reg_nr.byte[1]   '   address A7..A0
-        core.SECTOR_ERASE, core.BLOCK32_ERASE, core.BLOCK64_ERASE,{
+        core.SECTOR_ERASE, core.BLK32_ERASE, core.BLK64_ERASE,{
         } core.CHIP_ERASE, core.CHIP_ERASE2:
             cmd_bytes := 4
             cmd_pkt.byte[0] := reg_nr.byte[0]   ' Erase Flash
@@ -215,7 +232,7 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, cmd_bytes
             cmd_pkt.byte[2] := reg_nr.byte[2]   '   address A15..A8
             cmd_pkt.byte[3] := reg_nr.byte[1]   '   address A7..A0
 
-        core.GLOBAL_BLOCK_UNLOCK:
+        core.GLOBAL_BLK_UNLOCK:
             cmd_bytes := 1
             cmd_pkt.byte[0] := reg_nr.byte[0]
 
