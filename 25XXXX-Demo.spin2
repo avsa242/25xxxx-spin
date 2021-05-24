@@ -3,9 +3,9 @@
     Filename: 25xxxx-Demo.spin2
     Author: Jesse Burt
     Description: Demo app for the 25xxxx driver
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Nov 09, 2019
-    Updated Nov 1, 2020
+    Updated May 24, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -110,15 +110,15 @@ PUB EraseSector(start_addr) | s, e
     ser.printf("done (%d cycles/%dus).\n", e, cycles_to_us(e))
     ser.clearline()
 
-PUB WriteTest(start_addr) | i, s, e, tmp
+PUB WriteTest(start_addr) | s, e, tmp
 ' Write a test value to flash starting at start_addr
-    tmp := $DE_AD_BE_EF
+    tmp := string("TEST")
     flash.writesenabled(true)
     messagewritesena()
 
     ser.printf("Writing test value...")
     s := getct()
-    flash.writeblock(start_addr + i, 4, @tmp)
+    flash.writeblock(start_addr, strsize(tmp), tmp)
     repeat while flash.busy()
     e := getct()-s
     ser.printf("done (%d cycles/%dus).\n", e, cycles_to_us(e))
