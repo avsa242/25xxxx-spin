@@ -5,7 +5,7 @@
     Description: Driver for 25xxxx-series SPI flash memories
     Copyright (c) 2021
     Started Nov 09, 2019
-    Updated May 24, 2021
+    Updated Oct 4, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -42,7 +42,7 @@ PUB Startx(CS, SCK, MOSI, MISO, SCK_HZ=DEF_SPI_CLK): status
 '   SCK_FREQ: SPI bus frequency (device and SPI-engine specific)
     if lookdown(CS: 0..63) and lookdown(SCK: 0..63) and lookdown(MOSI: 0..63) {
 }   and lookdown(MISO: 0..63) and lookdown(SCK_HZ: 1..core.SCK_MAX_FREQ)
-        if (status := spi.init(SCK, MOSI, MISO, SCK_HZ, core.SPI_MODE))
+        if (status := spi.init(SCK, MOSI, MISO, core.SPI_MODE, SCK_HZ))
             waitus(core.T_POR)                  ' wait for device startup
             _CS := CS
             pinh(_CS)
