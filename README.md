@@ -21,8 +21,16 @@ P2/SPIN2:
 
 ## Compiler Compatibility
 
-* P2/SPIN2: FlexSpin (tested with 5.5.0)
-* ~~PNut~~ (incompatible - no preprocessor)
+| Processor | Language | Compiler               | Backend     | Status                |
+|-----------|----------|------------------------|-------------|-----------------------|
+| P1        | SPIN1    | FlexSpin (5.9.13-beta) | Bytecode    | Not yet implemented   |
+| P1        | SPIN1    | FlexSpin (5.9.13-beta) | Native code | Not yet implemented   |
+| P1        | SPIN1    | OpenSpin (1.00.81)     | Bytecode    | Not yet implemented   |
+| P2        | SPIN2    | FlexSpin (5.9.13-beta) | NuCode      | Builds, but no start  |
+| P2        | SPIN2    | FlexSpin (5.9.13-beta) | Native code | OK                    |
+| P1        | SPIN1    | Brad's Spin Tool (any) | Bytecode    | Unsupported           |
+| P1, P2    | SPIN1, 2 | Propeller Tool (any)   | Bytecode    | Unsupported           |
+| P1, P2    | SPIN1, 2 | PNut (any)             | Bytecode    | Unsupported           |
 
 ## Limitations
 
@@ -32,11 +40,3 @@ P2/SPIN2:
 * Developed using 128Mbit part found on Parallax P2 Evaluation board - some methods may currently have hardcoded settings with this specific density chip in mind
 * Tested only with Winbond W25Q128
 
-## TODO
-
-- [x] Add methods for basic I/O (read, write bytes)
-- [x] Add methods for larger transactions
-- [x] Add a simple hex dump demo
-- [ ] Add a simple backup to SD app
-- [ ] Add support for other density parts (may be untested)
-- [ ] Port to SPIN1/P1
