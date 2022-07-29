@@ -7,7 +7,7 @@ This is a P2X8C4M64P/Propeller 2 driver object for 25xxxx-series flash memories
 
 ## Salient Features
 
-* SPI connection at up to 20MHz (tested at 200MHz fSYS - may work at higher SPI clocks - YMMV)
+* SPI connection at up to 25MHz (tested at up to 300MHz fSYS - may work at higher SPI clocks - YMMV)
 * Read device ID, Mfr. ID, JEDEC ID
 * Read, write a byte
 * Read, write a block (write limited to a page per transaction - 256 bytes)
@@ -23,11 +23,11 @@ P2/SPIN2:
 
 | Processor | Language | Compiler               | Backend     | Status                |
 |-----------|----------|------------------------|-------------|-----------------------|
-| P1        | SPIN1    | FlexSpin (5.9.13-beta) | Bytecode    | Not yet implemented   |
-| P1        | SPIN1    | FlexSpin (5.9.13-beta) | Native code | Not yet implemented   |
+| P1        | SPIN1    | FlexSpin (5.9.14-beta) | Bytecode    | Not yet implemented   |
+| P1        | SPIN1    | FlexSpin (5.9.14-beta) | Native code | Not yet implemented   |
 | P1        | SPIN1    | OpenSpin (1.00.81)     | Bytecode    | Not yet implemented   |
-| P2        | SPIN2    | FlexSpin (5.9.13-beta) | NuCode      | Builds, but no start  |
-| P2        | SPIN2    | FlexSpin (5.9.13-beta) | Native code | OK                    |
+| P2        | SPIN2    | FlexSpin (5.9.14-beta) | NuCode      | Builds, but no start  |
+| P2        | SPIN2    | FlexSpin (5.9.14-beta) | Native code | OK                    |
 | P1        | SPIN1    | Brad's Spin Tool (any) | Bytecode    | Unsupported           |
 | P1, P2    | SPIN1, 2 | Propeller Tool (any)   | Bytecode    | Unsupported           |
 | P1, P2    | SPIN1, 2 | PNut (any)             | Bytecode    | Unsupported           |
