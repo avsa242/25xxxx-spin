@@ -1,6 +1,6 @@
 {
     --------------------------------------------
-    Filename: memory.flash.25xxxx.spi.spin2
+    Filename: memory.flash.25xxxx.spin2
     Author: Jesse Burt
     Description: Driver for 25xxxx-series SPI flash memories
     Copyright (c) 2021
