@@ -18,6 +18,7 @@ This is a P2X8C4M64P/Propeller 2 driver object for 25xxxx-series flash memories
 
 P2/SPIN2:
 * p2-spin-standard-library
+* memory.common.spin2h (provided by p2-spin-standard-library)
 
 ## Compiler Compatibility
 
@@ -34,9 +35,7 @@ P2/SPIN2:
 
 ## Limitations
 
-* Very early in development - may malfunction, or outright fail to build
 * Single-lane SPI only (no Dual-SPI or Quad-SPI - unplanned, for now)
 * SPI driver is relatively slow, compared to memory's capability; not suitable for high-performance applications
-* Developed using 128Mbit part found on Parallax P2 Evaluation board - some methods may currently have hardcoded settings with this specific density chip in mind
 * Tested only with Winbond W25Q128
 
