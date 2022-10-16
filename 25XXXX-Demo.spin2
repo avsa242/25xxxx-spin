@@ -6,7 +6,7 @@
         * Memory hexdump display
     Copyright (c) 2022
     Started Nov 9, 2019
-    Updated Jul 30, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -38,7 +38,7 @@ CON
 
 OBJ
 
-    cfg : "core.con.boardcfg.p2eval"
+    cfg : "boardcfg.p2eval"
     ser : "com.serial.terminal.ansi"
     mem : "memory.flash.25xxxx"
 
