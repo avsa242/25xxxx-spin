@@ -22,16 +22,14 @@ P2/SPIN2:
 
 ## Compiler Compatibility
 
-| Processor | Language | Compiler               | Backend     | Status                |
-|-----------|----------|------------------------|-------------|-----------------------|
-| P1        | SPIN1    | FlexSpin (5.9.14-beta) | Bytecode    | Not yet implemented   |
-| P1        | SPIN1    | FlexSpin (5.9.14-beta) | Native code | Not yet implemented   |
-| P1        | SPIN1    | OpenSpin (1.00.81)     | Bytecode    | Not yet implemented   |
-| P2        | SPIN2    | FlexSpin (5.9.14-beta) | NuCode      | Builds, but no start  |
-| P2        | SPIN2    | FlexSpin (5.9.14-beta) | Native code | OK                    |
-| P1        | SPIN1    | Brad's Spin Tool (any) | Bytecode    | Unsupported           |
-| P1, P2    | SPIN1, 2 | Propeller Tool (any)   | Bytecode    | Unsupported           |
-| P1, P2    | SPIN1, 2 | PNut (any)             | Bytecode    | Unsupported           |
+| Processor | Language | Compiler               | Backend      | Status                |
+|-----------|----------|------------------------|--------------|-----------------------|
+| P1        | SPIN1    | FlexSpin (6.1.1)       | Bytecode     | Not yet implemented   |
+| P1        | SPIN1    | FlexSpin (6.1.1)       | Native/PASM  | Not yet implemented   |
+| P2        | SPIN2    | FlexSpin (6.1.1)       | NuCode       | FTBFS                 |
+| P2        | SPIN2    | FlexSpin (6.1.1)       | Native/PASM2 | OK                    |
+
+(other versions or toolchains not listed are __not supported__, and _may or may not_ work)
 
 ## Limitations
 
