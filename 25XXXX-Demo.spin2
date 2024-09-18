@@ -1,24 +1,21 @@
 {
-    --------------------------------------------
-    Filename: 25XXXX-Demo.spin2
-    Author: Jesse Burt
-    Description: Simple demo of the 25XXXX NOR Flash driver (P2 version)
+----------------------------------------------------------------------------------------------------
+    Filename:       25XXXX-Demo.spin2
+    Description:    Demo of the 25XXXX NOR Flash driver
         * Memory hexdump display
-    Copyright (c) 2023
-    Started Nov 9, 2019
-    Updated Jul 13, 2023
-    See end of file for terms of use.
-    --------------------------------------------
+    Author:         Jesse Burt
+    Started:        Nov 9, 2019
+    Updated:        Sep 18, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
 
     _clkfreq    = 250_000_000
-    _xtlfreq    = cfg._xtlfreq
+    _xtlfreq    = 20_000_000
 
 ' -- User-modifiable constants
-    SER_BAUD    = 2_000_000
-
     { memory size }
     PART        = 128
     MULT        = M                             ' K = kilobits, M = megabits
@@ -27,33 +24,146 @@ CON
     K           = 1024
     M           = 1048576
     MEMSIZE     = (PART * MULT) / 8
+    CYCLES_USEC = _CLKFREQ / 1_000_000          ' calc . cycles in 1 microsec
+
 
 OBJ
 
-    cfg:    "boardcfg.p2eval"
-    ser:    "com.serial.terminal.ansi"
+    math:   "math.int"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
     mem:    "memory.flash.25xxxx" | CS=61, SCK=60, MOSI=59, MISO=58, SPI_FREQ=20_000_000
 '                                   NOTE: MOSI and MISO must each be +/- 3 of SCK
 
+
+VAR
+
+    word _lastpage
+    word _pagesize
+    byte _pg_buff[512]                          ' reasonable maximum
+
+
+PUB main() | base_page, offs
+
+    setup()
+
+    ser.set_attrs(ser.ECHO)
+    _pagesize := mem.page_size() <# 512
+    ser.printf(@"Page size: %d\n\r", _pagesize)
+    bytefill(@_pg_buff, 0, _pagesize)          ' clear out buffer
+    _lastpage := (MEMSIZE / _pagesize)-1
+    base_page := 0
+    mem.rd_block_lsbf(@_pg_buff, base_page, _pagesize)
+    offs := pg2byte_offs(base_page)
+    ser.pos_xy(0, 4)
+    ser.strln(@"Keys:")
+    ser.strln(@"[, ]: go back, forward a page in memory")
+    ser.strln(@"a: go to specific address (hexdump will round down to page start address)")
+    ser.strln(@"s, e: go to the first, last page")
+    ser.strln(@"w: write test: fill current page with random value")
+    ser.strln(@"x: erase test: fill the current page with the erase value")
+    ser.strln(@"   (varies among memory types)")
+    ser.fgcolor(ser.RED)
+    ser.strln(@"Only perform the write or erase test if the data stored on the memory")
+    ser.strln(@"  isn't important!")
+    ser.fgcolor(ser.GREY)
+    repeat
+        ser.pos_xy(0, 13)
+        { display a hexdump of the current page of memory, but limit it to
+            a reasonable 512 bytes at a time }
+        ser.hexdump(@_pg_buff, offs, 6, _pagesize, 16)
+
+        case ser.getchar()
+            "[":                                ' go back a page in memory
+                base_page--
+                if (base_page < 0)
+                    base_page := 0
+            "]":                                ' go forward a page
+                base_page++
+                if (base_page > _lastpage)
+                    base_page := _lastpage
+            "a":
+                ser.str(@"Enter address (hex): ")
+                base_page := ser.gethex() / _pagesize
+                ser.newline()
+            "e":                                ' go to the last page
+                base_page := _lastpage
+            "s":                                ' go to the first page
+                base_page := 0
+            "w":                                ' fill page w/test value
+                cycle_time(write_test(offs))
+            "x":                                ' erase the current page
+                cycle_time(erase_test(offs))
+            other:
+        offs := pg2byte_offs(base_page)
+        cycle_time(read_test(offs))
+
+
+PUB erase_test(st_addr): etime | stime
+' Erase memory page
+    ser.str(@"Erasing page...")
+
+    mem.global_lock(false)
+    mem.writes_ena(true)
+    stime := getct()
+    mem.erase(st_addr, mem.SECTOR)
+    repeat while mem.busy()
+    etime := getct()-stime
+
+
+PUB read_test(st_addr): etime | stime
+' Read memory page
+    bytefill(@_pg_buff, 0, _pagesize)
+    ser.str(@"Reading page...")
+
+    { read memory page to buffer }
+    stime := getct()
+    mem.rd_block_lsbf(@_pg_buff, st_addr, _pagesize)
+    etime := getct()-stime
+
+
+PUB write_test(st_addr): etime | stime
+' Write a random test value to memory page
+    ser.str(@"Writing page...")
+    bytefill(@_pg_buff, math.rndi(255), _pagesize)
+
+    mem.global_lock(false)
+    mem.writes_ena(true)
+
+    { fill page with test character }
+    stime := getct()
+    mem.wr_block_lsbf(st_addr, @_pg_buff, _pagesize)
+    repeat while mem.busy()
+    etime := getct()-stime
+
+
+PRI cycle_time(cycles)
+' Display elapsed time in cycles and microseconds
+    ser.printf(@"%d cycles (%dusec)", cycles, (cycles / CYCLES_USEC))
+    ser.clear_ln()
+    ser.newline()
+
+
+PRI pg2byte_offs(page_nr): b
+' Get start of page number as a byte offset
+    return (page_nr * _pagesize)
+
+
 PUB setup()
 
-    ser.start(SER_BAUD)
+    ser.start()
     ser.clear()
     ser.strln(@"Serial terminal started")
+
     if ( mem.start() )
         ser.strln(@"25XXXX driver started")
     else
         ser.strln(@"25XXXX driver failed to start - halting")
         repeat
 
-    demo()
-
-#define IS_FLASH
-#include "memdemo.common.spin2h"
 
 DAT
 {
-Copyright 2023 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

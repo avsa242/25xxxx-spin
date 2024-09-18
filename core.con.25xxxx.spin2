@@ -1,13 +1,12 @@
 {
-    --------------------------------------------
-    Filename: core.con.25xxxx.spin2
-    Author: Jesse Burt
-    Description: 25xxxx-specific constants
-    Copyright (c) 2021
-    Started Nov 09, 2019
-    Updated May 24, 2021
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       core.con.25xxxx.spin2
+    Description:    25xxxx-specific constants
+    Author:         Jesse Burt
+    Started:        Nov 9, 2019
+    Updated:        Sep 18, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
@@ -78,12 +77,14 @@ CON
     CHIP_ERASE2                 = $C7
     BLK64_ERASE                 = $D8
 
+
 PUB null()
 ' This is not a top-level object
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
